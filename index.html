@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Sparna Run — Catalogue</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1c1e22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sparna">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#17191d;
+  --surface:#212429;
+  --surface-2:#2b2f36;
+  --surface-3:#363b44;
+  --paper:#f2f0eb;
+  --dim:#9ba0a9;
+  --route:#3b82f6;
+  --trail:#6f9a41;
+  --rando:#d08a2e;
+  --ok:#5fbf6a;
+  --danger:#e0573d;
+  --line:rgba(255,255,255,0.08);
+  --line-2:rgba(255,255,255,0.14);
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);overscroll-behavior-y:none;}
+body{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  color:var(--paper);font-size:16px;-webkit-font-smoothing:antialiased;
+}
+.cond{font-family:'Barlow Condensed','Inter',sans-serif;text-transform:uppercase;letter-spacing:.03em;}
+.mono{font-family:'DM Mono','SF Mono',Menlo,monospace;}
+button,input,select,textarea{font-family:inherit;}
+img{display:block;}
+
+#app{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
+
+/* ============ BALISAGE ============ */
+.blaze{width:9px;height:20px;border-radius:2px;flex-shrink:0;display:inline-block;}
+.blaze.route{background:var(--route);} .blaze.trail{background:var(--trail);} .blaze.rando{background:var(--rando);}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.dot.route{background:var(--route);} .dot.trail{background:var(--trail);} .dot.rando{background:var(--rando);}
+
+/* ============ TOPBAR ============ */
+.topbar{
+  position:sticky;top:0;z-index:30;background:var(--bg);
+  padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);
+}
+.tb-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:1.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1;}
+.tb-title em{font-style:normal;color:var(--route);}
+.tb-sub{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--dim);margin-top:3px;}
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--paper);display:grid;place-items:center;cursor:pointer;flex-shrink:0;
+}
+.icon-btn svg{width:19px;height:19px;}
+.icon-btn.on{background:var(--paper);color:var(--bg);border-color:var(--paper);}
+
+.chips{display:flex;gap:7px;margin-top:13px;overflow-x:auto;scrollbar-width:none;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{
+  display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:20px;
+  border:1px solid var(--line);background:var(--surface);font-size:.82rem;font-weight:500;
+  white-space:nowrap;cursor:pointer;color:var(--dim);
+}
+.chip.active{background:var(--surface-3);color:var(--paper);border-color:var(--line-2);}
+.chip .cnt{font-family:'DM Mono',monospace;font-size:.7rem;opacity:.6;}
+
+.searchbox{position:relative;margin-top:11px;}
+.searchbox input{
+  width:100%;padding:11px 14px 11px 38px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--paper);font-size:.93rem;
+}
+.searchbox input::placeholder{color:var(--dim);}
+.searchbox input:focus{outline:none;border-color:var(--line-2);}
+.searchbox svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--dim);}
+
+main{flex:1;padding:14px 16px calc(96px + env(safe-area-inset-bottom));}
+.view{display:none;} .view.active{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.sec-label{
+  font-family:'Barlow Condensed',sans-serif;font-size:.85rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:10px;font-weight:600;
+}
+
+/* ============ CARTE PAIRE ============ */
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  margin-bottom:11px;display:flex;overflow:hidden;cursor:pointer;position:relative;
+}
+.card:active{border-color:var(--line-2);}
+.card .stripe{width:4px;flex-shrink:0;}
+.card .stripe.route{background:var(--route);} .card .stripe.trail{background:var(--trail);} .card .stripe.rando{background:var(--rando);}
+.card .thumb{
+  width:88px;flex-shrink:0;background:var(--surface-2);
+  display:grid;place-items:center;overflow:hidden;
+}
+.card .thumb img{width:100%;height:100%;object-fit:cover;}
+.card .thumb .ph{color:var(--dim);opacity:.35;}
+.card .thumb .ph svg{width:26px;height:26px;}
+.card .body{flex:1;min-width:0;padding:12px 13px;}
+.card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+.c-brand{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600;}
+.c-model{font-weight:700;font-size:.98rem;line-height:1.25;margin-top:1px;}
+.c-price{font-family:'DM Mono',monospace;font-size:.87rem;white-space:nowrap;font-weight:500;}
+.c-specs{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;}
+.c-specs span{font-family:'DM Mono',monospace;font-size:.71rem;color:var(--dim);}
+.c-specs b{color:var(--paper);font-weight:500;}
+.c-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.tg{font-size:.66rem;padding:3px 7px;border-radius:5px;background:var(--surface-2);color:var(--dim);}
+.stockline{display:flex;align-items:center;gap:5px;font-size:.71rem;margin-top:7px;}
+.stockline .sd{width:7px;height:7px;border-radius:50%;}
+.sd.in{background:var(--ok);} .sd.low{background:var(--rando);} .sd.out{background:var(--danger);}
+.card.picked{border-color:var(--paper);}
+.pickbadge{
+  position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;
+  background:var(--paper);color:var(--bg);display:grid;place-items:center;font-size:.72rem;font-weight:700;
+}
+
+.empty{text-align:center;padding:56px 24px;color:var(--dim);}
+.empty svg{width:38px;height:38px;opacity:.35;margin-bottom:12px;}
+.empty p{font-size:.88rem;line-height:1.55;margin:0 0 16px;}
+
+/* ============ FORM ============ */
+.fs{margin-bottom:20px;}
+.field{margin-bottom:11px;}
+.field label{display:block;font-size:.76rem;color:var(--dim);margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);
+  background:var(--surface);color:var(--paper);font-size:.92rem;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--line-2);}
+.field textarea{min-height:72px;resize:vertical;}
+.frow{display:flex;gap:10px;} .frow .field{flex:1;}
+.hint{font-size:.7rem;color:var(--dim);margin-top:4px;opacity:.75;}
+
+.catsel{display:flex;gap:8px;}
+.catsel button{
+  flex:1;padding:13px 4px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);
+  color:var(--dim);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;
+  text-transform:uppercase;letter-spacing:.05em;cursor:pointer;
+}
+.catsel button.on[data-cat=route]{border-color:var(--route);color:var(--route);background:rgba(59,130,246,.13);}
+.catsel button.on[data-cat=trail]{border-color:var(--trail);color:var(--trail);background:rgba(111,154,65,.15);}
+.catsel button.on[data-cat=rando]{border-color:var(--rando);color:var(--rando);background:rgba(208,138,46,.15);}
+
+.segs{display:flex;gap:7px;flex-wrap:wrap;}
+.seg{
+  padding:9px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface);
+  color:var(--dim);font-size:.83rem;cursor:pointer;
+}
+.seg.on{background:var(--surface-3);color:var(--paper);border-color:var(--line-2);}
+
+.switch-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);}
+.switch-row:last-child{border-bottom:none;}
+.switch-row span{font-size:.88rem;}
+.sw{width:46px;height:27px;border-radius:14px;background:var(--surface-3);border:none;position:relative;cursor:pointer;flex-shrink:0;}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:var(--dim);transition:.18s;}
+.sw.on{background:var(--route);} .sw.on::after{left:22px;background:#fff;}
+
+/* PHOTOS */
+.photo-grid{display:flex;gap:9px;flex-wrap:wrap;}
+.photo-item{
+  width:78px;height:78px;border-radius:11px;overflow:hidden;position:relative;
+  background:var(--surface-2);border:1px solid var(--line);
+}
+.photo-item img{width:100%;height:100%;object-fit:cover;}
+.photo-item .rm{
+  position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;
+  background:rgba(0,0,0,.7);color:#fff;border:none;display:grid;place-items:center;font-size:.8rem;cursor:pointer;line-height:1;
+}
+.photo-item .main-flag{
+  position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.72);
+  font-size:.58rem;text-align:center;padding:2px;letter-spacing:.05em;text-transform:uppercase;
+}
+.photo-add{
+  width:78px;height:78px;border-radius:11px;border:1.5px dashed var(--line-2);background:transparent;
+  color:var(--dim);display:grid;place-items:center;cursor:pointer;gap:2px;
+}
+.photo-add svg{width:20px;height:20px;}
+.photo-add small{font-size:.6rem;}
+
+/* POINTURES */
+.size-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:7px;}
+.size-cell{
+  border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 3px;text-align:center;cursor:pointer;
+}
+.size-cell .n{font-family:'DM Mono',monospace;font-size:.85rem;font-weight:500;}
+.size-cell .q{font-size:.62rem;color:var(--dim);margin-top:2px;}
+.size-cell.has{background:rgba(95,191,106,.14);border-color:rgba(95,191,106,.45);}
+.size-cell.has .q{color:var(--ok);}
+
+.btn{
+  width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;font-size:1rem;
+}
+.btn-p{background:var(--paper);color:var(--bg);}
+.btn-s{background:transparent;color:var(--dim);border:1px solid var(--line);font-size:.88rem;padding:13px;}
+.btn-d{background:transparent;color:var(--danger);border:1px solid rgba(224,87,61,.4);font-size:.88rem;padding:13px;}
+.btn:active{opacity:.82;}
+.btn+.btn{margin-top:9px;}
+
+/* ============ NAV ============ */
+nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+  background:rgba(33,36,41,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:flex;padding:7px 8px calc(9px + env(safe-area-inset-bottom));z-index:40;
+}
+.nb{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;
+  background:none;border:none;color:var(--dim);font-size:.66rem;font-weight:600;cursor:pointer;letter-spacing:.02em;
+}
+.nb.active{color:var(--paper);}
+.nb svg{width:21px;height:21px;}
+
+/* ============ SHEET ============ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:none;align-items:flex-end;justify-content:center;}
+.overlay.on{display:flex;}
+.sheet{
+  width:100%;max-width:520px;max-height:94vh;overflow-y:auto;background:var(--bg);
+  border-radius:20px 20px 0 0;animation:up .22s ease-out;border-top:1px solid var(--line-2);
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));
+}
+@keyframes up{from{transform:translateY(26px);}to{transform:none;}}
+.grip{width:38px;height:4px;background:var(--surface-3);border-radius:3px;margin:9px auto 0;}
+.hero{width:100%;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden;position:relative;}
+.hero-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:100%;scrollbar-width:none;}
+.hero-scroll::-webkit-scrollbar{display:none;}
+.hero-scroll img{width:100%;height:100%;object-fit:cover;flex-shrink:0;scroll-snap-align:start;}
+.hero .none{height:100%;display:grid;place-items:center;color:var(--dim);opacity:.3;}
+.hero .none svg{width:44px;height:44px;}
+.hero-count{
+  position:absolute;bottom:9px;right:9px;background:rgba(0,0,0,.65);padding:3px 9px;border-radius:11px;
+  font-family:'DM Mono',monospace;font-size:.68rem;
+}
+.sh-head{padding:16px 20px 16px;border-bottom:1px solid var(--line);}
+.sh-brand{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:600;display:flex;align-items:center;gap:7px;}
+.sh-name{font-family:'Barlow Condensed',sans-serif;font-size:1.85rem;font-weight:700;text-transform:uppercase;line-height:1.02;margin:5px 0 9px;}
+.sh-prow{display:flex;justify-content:space-between;align-items:center;}
+.sh-price{font-family:'DM Mono',monospace;font-size:1.2rem;font-weight:500;}
+.sh-stock{font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px;}
+.sh-stock.in{color:var(--ok);} .sh-stock.low{color:var(--rando);} .sh-stock.out{color:var(--danger);}
+
+.spec-block{padding:17px 20px;border-bottom:1px solid var(--line);}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 14px;}
+.sp{border-left:2px solid var(--surface-3);padding-left:10px;}
+.sp .k{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);}
+.sp .v{font-family:'DM Mono',monospace;font-size:.98rem;margin-top:2px;font-weight:500;}
+.sizes-line{display:flex;gap:6px;flex-wrap:wrap;}
+.sz-pill{
+  font-family:'DM Mono',monospace;font-size:.75rem;padding:5px 9px;border-radius:7px;
+  background:var(--surface-2);border:1px solid var(--line);
+}
+.sz-pill.has{background:rgba(95,191,106,.15);border-color:rgba(95,191,106,.4);color:#a8dcae;}
+.notes-block{padding:16px 20px;font-size:.89rem;line-height:1.6;color:#d4d2cd;border-bottom:1px solid var(--line);white-space:pre-wrap;}
+.argu{padding:16px 20px;border-bottom:1px solid var(--line);}
+.argu p{font-size:.88rem;line-height:1.6;margin:0;color:#d4d2cd;}
+.sh-actions{padding:16px 20px 0;display:flex;gap:9px;}
+.sh-actions .btn{margin:0;}
+
+/* ============ CONSEIL ============ */
+.info-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:18px;}
+.info-box p{margin:0;font-size:.84rem;line-height:1.55;color:var(--dim);}
+.rank{
+  position:absolute;top:0;left:4px;width:26px;height:26px;background:var(--paper);color:var(--bg);
+  display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.9rem;
+  border-radius:0 0 8px 0;z-index:2;
+}
+.why{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.why span{font-size:.65rem;padding:3px 7px;border-radius:5px;background:rgba(95,191,106,.14);color:#9ed5a5;}
+.why span.warn{background:rgba(224,87,61,.14);color:#eb9a88;}
+.matchbar{height:3px;background:var(--surface-3);border-radius:2px;margin-top:9px;overflow:hidden;}
+.matchbar i{display:block;height:100%;background:var(--ok);border-radius:2px;}
+
+/* ============ COMPARATEUR ============ */
+.cmp-wrap{overflow-x:auto;margin:0 -16px;padding:0 16px;}
+.cmp-table{border-collapse:collapse;width:100%;min-width:400px;}
+.cmp-table th,.cmp-table td{
+  padding:10px 9px;text-align:left;border-bottom:1px solid var(--line);font-size:.82rem;vertical-align:top;
+}
+.cmp-table th{color:var(--dim);font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;width:88px;}
+.cmp-table td{font-family:'DM Mono',monospace;}
+.cmp-head td{padding-bottom:12px;}
+.cmp-head .nm{font-family:'Inter',sans-serif;font-weight:700;font-size:.9rem;line-height:1.2;}
+.cmp-head .br{font-family:'Inter',sans-serif;font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;}
+.cmp-bar{
+  position:fixed;bottom:calc(72px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  width:calc(100% - 32px);max-width:488px;background:var(--paper);color:var(--bg);
+  border-radius:12px;padding:12px 16px;display:none;align-items:center;justify-content:space-between;z-index:45;
+}
+.cmp-bar.on{display:flex;}
+.cmp-bar span{font-size:.85rem;font-weight:600;}
+.cmp-bar button{background:var(--bg);color:var(--paper);border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;}
+
+/* ============ REGLAGES ============ */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;}
+.stat .n{font-family:'Barlow Condensed',sans-serif;font-size:1.9rem;font-weight:700;line-height:1;}
+.stat .l{font-size:.7rem;color:var(--dim);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;}
+
+.toast{
+  position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--paper);color:var(--bg);padding:11px 20px;border-radius:10px;font-size:.85rem;
+  font-weight:600;z-index:80;opacity:0;transition:.22s;pointer-events:none;max-width:88%;text-align:center;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header class="topbar" id="topbar">
+  <div class="tb-row">
+    <div>
+      <div class="tb-title">Sparna <em>Run</em></div>
+      <div class="tb-sub" id="tbSub">chargement…</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="btnStockFilter" title="En stock seulement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 7l-8-4-8 4 8 4 8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>
+      </button>
+      <button class="icon-btn" id="btnSort" title="Trier">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M6 12h12M9 17h6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="chips" id="chips">
+    <div class="chip active" data-cat="all">Toutes <span class="cnt" data-cnt="all">0</span></div>
+    <div class="chip" data-cat="route"><span class="dot route"></span>Route <span class="cnt" data-cnt="route">0</span></div>
+    <div class="chip" data-cat="trail"><span class="dot trail"></span>Trail <span class="cnt" data-cnt="trail">0</span></div>
+    <div class="chip" data-cat="rando"><span class="dot rando"></span>Rando <span class="cnt" data-cnt="rando">0</span></div>
+  </div>
+  <div class="searchbox">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="search" id="search" placeholder="Marque, modèle, mot-clé…">
+  </div>
+</header>
+
+<main>
+
+<!-- ══════ CATALOGUE ══════ -->
+<section class="view active" id="v-catalogue">
+  <div id="list"></div>
+</section>
+
+<!-- ══════ FICHE (ajout / édition) ══════ -->
+<section class="view" id="v-form">
+  <div class="fs">
+    <div class="sec-label" id="formTitle">Nouvelle paire</div>
+    <div class="catsel" id="formCat">
+      <button data-cat="route">Route</button>
+      <button data-cat="trail">Trail</button>
+      <button data-cat="rando">Rando</button>
+    </div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Photos</div>
+    <div class="photo-grid" id="photoGrid"></div>
+    <input type="file" id="photoInput" accept="image/*" multiple class="hidden">
+    <div class="hint">Touche une photo pour la définir en photo principale. Les images sont compressées automatiquement.</div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Identité</div>
+    <div class="frow">
+      <div class="field"><label>Marque</label><input type="text" id="f-marque" list="brands" placeholder="Hoka"></div>
+      <div class="field"><label>Modèle</label><input type="text" id="f-modele" placeholder="Speedgoat 6"></div>
+    </div>
+    <datalist id="brands"></datalist>
+    <div class="frow">
+      <div class="field"><label>Prix public (€)</label><input type="number" id="f-prix" inputmode="decimal" placeholder="150"></div>
+      <div class="field"><label>Prix promo (€)</label><input type="number" id="f-promo" inputmode="decimal" placeholder="—"></div>
+    </div>
+    <div class="field"><label>Genre</label>
+      <div class="segs" id="segGenre">
+        <div class="seg on" data-v="mixte">Mixte</div>
+        <div class="seg" data-v="homme">Homme</div>
+        <div class="seg" data-v="femme">Femme</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Caractéristiques techniques</div>
+    <div class="frow">
+      <div class="field"><label>Poids (g)</label><input type="number" id="f-poids" inputmode="numeric" placeholder="285"></div>
+      <div class="field"><label>Drop (mm)</label><input type="number" id="f-drop" inputmode="numeric" placeholder="5"></div>
+    </div>
+    <div class="field"><label>Amorti</label>
+      <div class="segs" id="segAmorti">
+        <div class="seg" data-v="minimal">Minimal</div>
+        <div class="seg on" data-v="modere">Modéré</div>
+        <div class="seg" data-v="maximal">Maximal</div>
+      </div>
+    </div>
+    <div class="field"><label>Dynamisme</label>
+      <div class="segs" id="segDyn">
+        <div class="seg" data-v="souple">Souple / confort</div>
+        <div class="seg on" data-v="equilibre">Équilibré</div>
+        <div class="seg" data-v="reactif">Réactif / nerveux</div>
+      </div>
+    </div>
+    <div class="field"><label>Maintien</label>
+      <div class="segs" id="segStab">
+        <div class="seg on" data-v="neutre">Neutre</div>
+        <div class="seg" data-v="soutien">Soutien (pronation)</div>
+      </div>
+    </div>
+    <div class="field"><label>Largeur du chaussant</label>
+      <div class="segs" id="segChaussant">
+        <div class="seg" data-v="fin">Étroit</div>
+        <div class="seg on" data-v="standard">Standard</div>
+        <div class="seg" data-v="large">Large</div>
+      </div>
+    </div>
+    <div class="field"><label>Niveau / pratique conseillée</label>
+      <div class="segs" id="segNiveau">
+        <div class="seg" data-v="debutant">Débutant</div>
+        <div class="seg on" data-v="intermediaire">Régulier</div>
+        <div class="seg" data-v="confirme">Confirmé</div>
+      </div>
+    </div>
+    <div class="field" id="fieldCrampons"><label>Crampons (mm) — trail / rando</label><input type="number" id="f-crampons" inputmode="decimal" placeholder="4"></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Options</div>
+    <div class="switch-row"><span>Imperméable (GTX / membrane)</span><button class="sw" id="sw-gtx"></button></div>
+    <div class="switch-row"><span>Plaque carbone / rigide</span><button class="sw" id="sw-plaque"></button></div>
+    <div class="switch-row"><span>Tige montante / maintien cheville</span><button class="sw" id="sw-montante"></button></div>
+    <div class="switch-row"><span>Coup de cœur boutique</span><button class="sw" id="sw-coup"></button></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Usage</div>
+    <div class="segs" id="usageSegs"></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Stock par pointure</div>
+    <div class="hint" style="margin-bottom:9px;margin-top:0;">Touche une pointure pour ajouter une paire, appui long pour remettre à zéro.</div>
+    <div class="size-grid" id="sizeGrid"></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Notes techniques & argumentaire</div>
+    <div class="field"><textarea id="f-notes" placeholder="Semelle Vibram Megagrip, très bon grip sur rocher humide. Chaussant confortable pour pieds larges. À conseiller pour les sorties longues."></textarea></div>
+  </div>
+
+  <button class="btn btn-p" id="saveBtn">Enregistrer la fiche</button>
+  <button class="btn btn-s" id="cancelBtn">Annuler</button>
+</section>
+
+<!-- ══════ CONSEIL CLIENT ══════ -->
+<section class="view" id="v-conseil">
+  <div class="info-box"><p>Renseigne le profil du client. L'appli classe les paires du magasin par pertinence et te donne les arguments.</p></div>
+
+  <div class="fs">
+    <div class="sec-label">Rayon</div>
+    <div class="catsel" id="conseilCat">
+      <button data-cat="route" class="on">Route</button>
+      <button data-cat="trail">Trail</button>
+      <button data-cat="rando">Rando</button>
+    </div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Le client</div>
+    <div class="frow">
+      <div class="field"><label>Pointure</label><input type="number" id="c-pointure" inputmode="decimal" placeholder="42"></div>
+      <div class="field"><label>Poids (kg)</label><input type="number" id="c-poids" inputmode="numeric" placeholder="78"></div>
+    </div>
+    <div class="field"><label>Niveau</label>
+      <div class="segs" id="cNiveau">
+        <div class="seg on" data-v="">Peu importe</div>
+        <div class="seg" data-v="debutant">Débutant</div>
+        <div class="seg" data-v="intermediaire">Régulier</div>
+        <div class="seg" data-v="confirme">Confirmé</div>
+      </div>
+    </div>
+    <div class="field"><label>Foulée / maintien</label>
+      <div class="segs" id="cStab">
+        <div class="seg on" data-v="">Non déterminé</div>
+        <div class="seg" data-v="neutre">Neutre / universel</div>
+        <div class="seg" data-v="soutien">Pronateur → soutien</div>
+      </div>
+    </div>
+    <div class="field"><label>Confort recherché</label>
+      <div class="segs" id="cAmorti">
+        <div class="seg on" data-v="">Peu importe</div>
+        <div class="seg" data-v="minimal">Sensations sol</div>
+        <div class="seg" data-v="modere">Équilibré</div>
+        <div class="seg" data-v="maximal">Amorti maximal</div>
+      </div>
+    </div>
+    <div class="field"><label>Largeur de pied</label>
+      <div class="segs" id="cChaussant">
+        <div class="seg on" data-v="">Peu importe</div>
+        <div class="seg" data-v="fin">Pied fin</div>
+        <div class="seg" data-v="standard">Standard</div>
+        <div class="seg" data-v="large">Pied large</div>
+      </div>
+    </div>
+    <div class="field"><label>Budget max (€)</label><input type="number" id="c-budget" inputmode="numeric" placeholder="laisser vide si aucun"></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Usage annoncé</div>
+    <div class="segs" id="cUsage"></div>
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Contraintes</div>
+    <div class="switch-row"><span>Besoin d'imperméabilité</span><button class="sw" id="c-gtx"></button></div>
+    <div class="switch-row"><span>Uniquement les paires en stock</span><button class="sw on" id="c-stockonly"></button></div>
+  </div>
+
+  <button class="btn btn-p" id="conseilBtn">Trouver les paires adaptées</button>
+  <div id="conseilOut" style="margin-top:22px;"></div>
+</section>
+
+<!-- ══════ COMPARATEUR ══════ -->
+<section class="view" id="v-compare">
+  <div class="sec-label">Comparateur</div>
+  <div id="compareOut"></div>
+</section>
+
+<!-- ══════ RÉGLAGES ══════ -->
+<section class="view" id="v-reglages">
+  <div class="sec-label">Le magasin en chiffres</div>
+  <div class="stat-grid" id="statGrid"></div>
+
+  <div class="fs">
+    <div class="sec-label">Sauvegarde</div>
+    <div class="info-box"><p>Exporte régulièrement ton catalogue. Le fichier contient toutes les fiches et les photos — tu peux le réimporter sur un autre téléphone.</p></div>
+    <button class="btn btn-s" id="exportBtn">Exporter le catalogue (fichier)</button>
+    <button class="btn btn-s" id="importBtn">Importer un catalogue</button>
+    <input type="file" id="importInput" accept="application/json,.json" class="hidden">
+  </div>
+
+  <div class="fs">
+    <div class="sec-label">Zone sensible</div>
+    <button class="btn btn-d" id="wipeBtn">Effacer tout le catalogue</button>
+  </div>
+
+  <div class="hint" style="text-align:center;margin-top:24px;opacity:.5;">Sparna Run · catalogue interne</div>
+</section>
+
+</main>
+
+<div class="cmp-bar" id="cmpBar">
+  <span id="cmpCount">0 paire sélectionnée</span>
+  <button id="cmpGo">Comparer</button>
+</div>
+
+<nav>
+  <button class="nb active" data-v="catalogue">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 16c0-2.2 1.3-3.4 3.2-3.4h.9l2.2-4.2h4.4l2.2 4.2h.9C18.7 12.6 21 13.8 21 16v1.4c0 .9-.7 1.6-1.6 1.6H4.6c-.9 0-1.6-.7-1.6-1.6V16z"/></svg>
+    Catalogue</button>
+  <button class="nb" data-v="form">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>
+    Ajouter</button>
+  <button class="nb" data-v="conseil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M21 21l-5.2-5.2"/></svg>
+    Conseil</button>
+  <button class="nb" data-v="compare">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4v16M15 4v16M4 9h16M4 15h16"/></svg>
+    Comparer</button>
+  <button class="nb" data-v="reglages">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.6 1.6 0 007 19.4a1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H1a2 2 0 110-4h.1A1.6 1.6 0 002.6 9a1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H7a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg>
+    Réglages</button>
+</nav>
+</div>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ════════════════════════════════════════════
+   SPARNA RUN — catalogue boutique
+   Stockage : window.storage (dans Claude) sinon IndexedDB (téléphone / web)
+   ════════════════════════════════════════════ */
+
+/* ---------- 1. COUCHE DE STOCKAGE ---------- */
+const KV = (function(){
+  const hasClaude = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+  if(hasClaude){
+    return {
+      mode:'claude',
+      async get(k){ try{ const r = await window.storage.get(k,false); return r ? r.value : null; }catch(e){ return null; } },
+      async set(k,v){ await window.storage.set(k,v,false); },
+      async del(k){ try{ await window.storage.delete(k,false); }catch(e){} },
+      async list(prefix){ try{ const r = await window.storage.list(prefix,false); return r ? r.keys : []; }catch(e){ return []; } }
+    };
+  }
+  // IndexedDB
+  let dbp = null;
+  function db(){
+    if(dbp) return dbp;
+    dbp = new Promise((res,rej)=>{
+      const rq = indexedDB.open('sparna-run',1);
+      rq.onupgradeneeded = ()=>{ rq.result.createObjectStore('kv'); };
+      rq.onsuccess = ()=>res(rq.result);
+      rq.onerror = ()=>rej(rq.error);
+    });
+    return dbp;
+  }
+  function tx(mode,fn){
+    return db().then(d=>new Promise((res,rej)=>{
+      const t = d.transaction('kv',mode);
+      const s = t.objectStore('kv');
+      const r = fn(s);
+      r.onsuccess = ()=>res(r.result);
+      r.onerror = ()=>rej(r.error);
+    }));
+  }
+  return {
+    mode:'idb',
+    get(k){ return tx('readonly',s=>s.get(k)).then(v=>v===undefined?null:v).catch(()=>null); },
+    set(k,v){ return tx('readwrite',s=>s.put(v,k)); },
+    del(k){ return tx('readwrite',s=>s.delete(k)); },
+    list(prefix){ return tx('readonly',s=>s.getAllKeys()).then(ks=>(ks||[]).filter(k=>!prefix||String(k).startsWith(prefix))).catch(()=>[]); }
+  };
+})();
+
+const CATALOG_KEY = 'catalog_v2';
+
+/* ---------- 2. RÉFÉRENTIEL ---------- */
+const USAGE = {
+  route:['Quotidien','Sorties longues','Fractionné / allure','Compétition','Récupération','Débuter la course','Marche rapide'],
+  trail:['Format court','Format long / ultra','Terrain technique','Chemins roulants','Boue / terrain gras','Montagne / dénivelé','Compétition'],
+  rando:['Balade à la journée','Trek plusieurs jours','Terrain facile','Terrain accidenté','Montagne','Portage lourd','Marche urbaine']
+};
+const CAT_LABEL = {route:'Route',trail:'Trail',rando:'Rando'};
+const AMORTI_L = {minimal:'Minimal',modere:'Modéré',maximal:'Maximal'};
+const DYN_L = {souple:'Souple',equilibre:'Équilibré',reactif:'Réactif'};
+const STAB_L = {neutre:'Neutre',soutien:'Soutien'};
+const CHAUS_L = {fin:'Étroit',standard:'Standard',large:'Large'};
+const NIV_L = {debutant:'Débutant',intermediaire:'Régulier',confirme:'Confirmé'};
+const GENRE_L = {mixte:'Mixte',homme:'Homme',femme:'Femme'};
+const SIZES = (()=>{ const a=[]; for(let s=36;s<=48;s+=0.5) a.push(s); return a; })();
+const BRANDS = ['Hoka','Salomon','Brooks','Asics','New Balance','Saucony','Nike','Adidas','On','Mizuno','Altra','Scarpa','La Sportiva','Merrell','Millet','Lowa','Meindl','Kayland','Dynafit','Inov-8','Topo Athletic','Puma','Craft','Scott','Columbia'];
+
+/* ---------- 3. ÉTAT ---------- */
+let shoes = [];
+const photoCache = new Map();   // photoId -> dataURL
+let view='catalogue', catFilter='all', query='', stockOnly=false, sortMode='marque';
+let editingId=null, picked=new Set();
+let F = null;  // état du formulaire courant
+
+/* ---------- 4. UTILITAIRES ---------- */
+const $ = id => document.getElementById(id);
+const uid = p => (p||'s')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function esc(s){ const d=document.createElement('div'); d.textContent = (s==null?'':s); return d.innerHTML; }
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._x); t._x=setTimeout(()=>t.classList.remove('on'),2000); }
+function totalStock(s){ return Object.values(s.tailles||{}).reduce((a,b)=>a+(Number(b)||0),0); }
+function stockState(s){ const n=totalStock(s); return n===0?'out':(n<=2?'low':'in'); }
+function stockLabel(s){ const n=totalStock(s); return n===0?'Rupture':(n+' paire'+(n>1?'s':'')+' en stock'); }
+function fmtPrice(s){
+  if(s.promo) return `<s style="opacity:.5">${s.prix||''}€</s> ${s.promo}€`;
+  return s.prix!=null&&s.prix!==''?s.prix+' €':'—';
+}
+function effPrice(s){ return s.promo!=null&&s.promo!==''?Number(s.promo):(s.prix!=null&&s.prix!==''?Number(s.prix):null); }
+
+/* ---------- 5. PHOTOS ---------- */
+function compress(file, maxDim=1100, quality=0.72){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let {width:w,height:h} = img;
+        const sc = Math.min(1, maxDim/Math.max(w,h));
+        w = Math.round(w*sc); h = Math.round(h*sc);
+        const c = document.createElement('canvas');
+        c.width=w; c.height=h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',quality));
+      };
+      img.onerror = rej;
+      img.src = r.result;
+    };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+async function getPhoto(pid){
+  if(photoCache.has(pid)) return photoCache.get(pid);
+  const v = await KV.get('ph_'+pid);
+  if(v) photoCache.set(pid,v);
+  return v;
+}
+async function savePhoto(dataUrl){
+  const pid = uid('p');
+  await KV.set('ph_'+pid, dataUrl);
+  photoCache.set(pid,dataUrl);
+  return pid;
+}
+async function delPhoto(pid){ await KV.del('ph_'+pid); photoCache.delete(pid); }
+async function preloadPhotos(){
+  const need = new Set();
+  shoes.forEach(s=>(s.photos||[]).forEach(p=>need.add(p)));
+  for(const p of need){ if(!photoCache.has(p)) await getPhoto(p); }
+}
+
+/* ---------- 6. PERSISTENCE ---------- */
+async function loadAll(){
+  const raw = await KV.get(CATALOG_KEY);
+  try{ shoes = raw ? JSON.parse(raw) : []; }catch(e){ shoes = []; }
+  if(!Array.isArray(shoes)) shoes = [];
+  await preloadPhotos();
+  renderCatalogue(); renderStats();
+}
+let saveTimer=null;
+function saveAll(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{ await KV.set(CATALOG_KEY, JSON.stringify(shoes)); }
+    catch(e){ toast('Erreur de sauvegarde'); console.error(e); }
+  }, 120);
+}
+
+/* ---------- 7. NAVIGATION ---------- */
+document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
+function go(v){
+  view = v;
+  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('active', b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+  $('v-'+v).classList.add('active');
+  $('topbar').style.display = (v==='catalogue') ? 'block' : 'none';
+  if(v==='form' && !editingId) resetForm();
+  if(v==='compare') renderCompare();
+  if(v==='reglages') renderStats();
+  window.scrollTo(0,0);
+}
+
+/* ---------- 8. FILTRES CATALOGUE ---------- */
+document.querySelectorAll('#chips .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); catFilter=c.dataset.cat; renderCatalogue();
+}));
+$('search').addEventListener('input',e=>{ query=e.target.value.toLowerCase().trim(); renderCatalogue(); });
+$('btnStockFilter').addEventListener('click',()=>{
+  stockOnly=!stockOnly; $('btnStockFilter').classList.toggle('on',stockOnly);
+  toast(stockOnly?'Uniquement les paires en stock':'Toutes les paires'); renderCatalogue();
+});
+$('btnSort').addEventListener('click',()=>{
+  const modes=['marque','prix','poids','recent'];
+  const labels={marque:'Tri : marque',prix:'Tri : prix croissant',poids:'Tri : plus légères',recent:'Tri : ajoutées récemment'};
+  sortMode = modes[(modes.indexOf(sortMode)+1)%modes.length];
+  toast(labels[sortMode]); renderCatalogue();
+});
+
+/* ---------- 9. RENDU CATALOGUE ---------- */
+function renderCatalogue(){
+  const counts={all:shoes.length,route:0,trail:0,rando:0};
+  shoes.forEach(s=>counts[s.categorie]!==undefined&&counts[s.categorie]++);
+  document.querySelectorAll('[data-cnt]').forEach(e=>e.textContent=counts[e.dataset.cnt]);
+  const inStock = shoes.filter(s=>totalStock(s)>0).length;
+  $('tbSub').textContent = shoes.length ? `${shoes.length} modèles · ${inStock} en stock` : 'catalogue vide';
+
+  let f = shoes.filter(s=>{
+    if(catFilter!=='all'&&s.categorie!==catFilter) return false;
+    if(stockOnly&&totalStock(s)===0) return false;
+    if(query){
+      const hay=[s.marque,s.modele,(s.usage||[]).join(' '),s.notes||''].join(' ').toLowerCase();
+      if(!hay.includes(query)) return false;
+    }
+    return true;
+  });
+  f.sort((a,b)=>{
+    if(sortMode==='prix') return (effPrice(a)??1e9)-(effPrice(b)??1e9);
+    if(sortMode==='poids') return (a.poids??1e9)-(b.poids??1e9);
+    if(sortMode==='recent') return (b.createdAt||0)-(a.createdAt||0);
+    return (a.marque||'').localeCompare(b.marque||'')||(a.modele||'').localeCompare(b.modele||'');
+  });
+
+  const el=$('list');
+  if(!f.length){
+    el.innerHTML=`<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16c0-2.2 1.3-3.4 3.2-3.4h.9l2.2-4.2h4.4l2.2 4.2h.9C18.7 12.6 21 13.8 21 16v1.4c0 .9-.7 1.6-1.6 1.6H4.6c-.9 0-1.6-.7-1.6-1.6V16z"/></svg>
+      <p>${shoes.length? "Aucune paire ne correspond à ce filtre." : "Le catalogue est vide.<br>Commence par ajouter une première paire."}</p>
+      ${shoes.length?'':'<button class="btn btn-p" onclick="go(\'form\')" style="max-width:240px;margin:0 auto;">Ajouter une paire</button>'}
+    </div>`;
+    return;
+  }
+  el.innerHTML = f.map(cardHTML).join('');
+  el.querySelectorAll('.card').forEach(c=>{
+    let t, longFired=false;
+    c.addEventListener('click',()=>{ if(longFired){ longFired=false; return; } openSheet(c.dataset.id); });
+    c.addEventListener('contextmenu',e=>{ e.preventDefault(); longFired=true; togglePick(c.dataset.id); });
+    c.addEventListener('touchstart',()=>{
+      longFired=false;
+      t=setTimeout(()=>{ longFired=true; togglePick(c.dataset.id); navigator.vibrate&&navigator.vibrate(15); },480);
+    },{passive:true});
+    ['touchend','touchmove','touchcancel'].forEach(ev=>c.addEventListener(ev,()=>clearTimeout(t),{passive:true}));
+  });
+}
+
+function cardHTML(s){
+  const ph = (s.photos&&s.photos.length)?photoCache.get(s.photos[0]):null;
+  const st = stockState(s);
+  const isP = picked.has(s.id);
+  return `<div class="card ${isP?'picked':''}" data-id="${s.id}">
+    <div class="stripe ${s.categorie}"></div>
+    <div class="thumb">${ph?`<img src="${ph}" alt="">`:`<div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-6 6-2-2-5 5"/></svg></div>`}</div>
+    <div class="body">
+      ${isP?`<div class="pickbadge">✓</div>`:''}
+      <div class="card-top">
+        <div style="min-width:0">
+          <div class="c-brand">${esc(s.marque)}${s.coup?' · ★':''}</div>
+          <div class="c-model">${esc(s.modele)}</div>
+        </div>
+        <div class="c-price">${fmtPrice(s)}</div>
+      </div>
+      <div class="c-specs">
+        ${s.poids?`<span><b>${s.poids}</b>g</span>`:''}
+        ${s.drop!=null&&s.drop!==''?`<span>drop <b>${s.drop}</b></span>`:''}
+        <span>${AMORTI_L[s.amorti]||''}</span>
+        ${s.gtx?`<span>GTX</span>`:''}
+      </div>
+      <div class="c-tags">${(s.usage||[]).slice(0,2).map(u=>`<span class="tg">${esc(u)}</span>`).join('')}</div>
+      <div class="stockline"><span class="sd ${st}"></span><span style="color:var(--dim)">${stockLabel(s)}</span></div>
+    </div>
+  </div>`;
+}
+
+function togglePick(id){
+  if(picked.has(id)) picked.delete(id);
+  else{ if(picked.size>=3){ toast('3 paires maximum'); return; } picked.add(id); }
+  renderCatalogue(); updateCmpBar();
+}
+function updateCmpBar(){
+  const b=$('cmpBar');
+  b.classList.toggle('on',picked.size>0);
+  $('cmpCount').textContent = picked.size+' paire'+(picked.size>1?'s':'')+' sélectionnée'+(picked.size>1?'s':'');
+}
+$('cmpGo').addEventListener('click',()=>go('compare'));
+
+/* ---------- 10. FICHE TECHNIQUE ---------- */
+function openSheet(id){
+  const s = shoes.find(x=>x.id===id); if(!s) return;
+  const st = stockState(s);
+  const photos = (s.photos||[]).map(p=>photoCache.get(p)).filter(Boolean);
+  const sizesInStock = Object.entries(s.tailles||{}).filter(([k,v])=>v>0).sort((a,b)=>Number(a[0])-Number(b[0]));
+
+  $('sheet').innerHTML = `
+    <div class="grip"></div>
+    <div class="hero">
+      ${photos.length?`<div class="hero-scroll">${photos.map(p=>`<img src="${p}" alt="">`).join('')}</div>
+        ${photos.length>1?`<div class="hero-count mono">${photos.length} photos</div>`:''}`
+      :`<div class="none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-6 6-2-2-5 5"/></svg></div>`}
+    </div>
+    <div class="sh-head">
+      <div class="sh-brand"><span class="dot ${s.categorie}"></span>${esc(s.marque)} · ${CAT_LABEL[s.categorie]} · ${GENRE_L[s.genre]||'Mixte'}</div>
+      <div class="sh-name">${esc(s.modele)}</div>
+      <div class="sh-prow">
+        <div class="sh-price">${fmtPrice(s)}</div>
+        <div class="sh-stock ${st}"><span class="sd ${st}" style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>${stockLabel(s)}</div>
+      </div>
+    </div>
+
+    <div class="spec-block">
+      <div class="sec-label">Fiche technique</div>
+      <div class="spec-grid">
+        <div class="sp"><div class="k">Poids</div><div class="v">${s.poids?s.poids+' g':'—'}</div></div>
+        <div class="sp"><div class="k">Drop</div><div class="v">${(s.drop!=null&&s.drop!=='')?s.drop+' mm':'—'}</div></div>
+        <div class="sp"><div class="k">Amorti</div><div class="v">${AMORTI_L[s.amorti]||'—'}</div></div>
+        <div class="sp"><div class="k">Dynamisme</div><div class="v">${DYN_L[s.dyn]||'—'}</div></div>
+        <div class="sp"><div class="k">Maintien</div><div class="v">${STAB_L[s.stabilite]||'—'}</div></div>
+        <div class="sp"><div class="k">Chaussant</div><div class="v">${CHAUS_L[s.chaussant]||'—'}</div></div>
+        <div class="sp"><div class="k">Niveau</div><div class="v">${NIV_L[s.niveau]||'—'}</div></div>
+        ${s.crampons?`<div class="sp"><div class="k">Crampons</div><div class="v">${s.crampons} mm</div></div>`:''}
+      </div>
+      ${(s.gtx||s.plaque||s.montante||s.coup)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">
+        ${s.gtx?'<span class="tg">Imperméable</span>':''}
+        ${s.plaque?'<span class="tg">Plaque carbone</span>':''}
+        ${s.montante?'<span class="tg">Tige montante</span>':''}
+        ${s.coup?'<span class="tg">★ Coup de cœur</span>':''}
+      </div>`:''}
+    </div>
+
+    <div class="spec-block">
+      <div class="sec-label">Usage</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${(s.usage||[]).map(u=>`<span class="tg" style="background:var(--surface-3);color:var(--paper)">${esc(u)}</span>`).join('')||'<span class="tg">Non renseigné</span>'}
+      </div>
+    </div>
+
+    <div class="spec-block">
+      <div class="sec-label">Pointures disponibles</div>
+      <div class="sizes-line">
+        ${sizesInStock.length?sizesInStock.map(([k,v])=>`<span class="sz-pill has">${k}${v>1?` ×${v}`:''}</span>`).join(''):'<span class="sz-pill">Aucune paire en stock</span>'}
+      </div>
+    </div>
+
+    <div class="argu">
+      <div class="sec-label">Argumentaire</div>
+      <p>${argumentaire(s)}</p>
+    </div>
+
+    ${s.notes?`<div class="notes-block"><div class="sec-label">Notes</div>${esc(s.notes)}</div>`:''}
+
+    <div class="sh-actions">
+      <button class="btn btn-p" id="shEdit">Modifier</button>
+      <button class="btn btn-s" id="shPick" style="flex:0 0 34%;">${picked.has(s.id)?'Retirer':'Comparer'}</button>
+    </div>
+    <div style="padding:9px 20px 0;"><button class="btn btn-d" id="shDel">Supprimer cette fiche</button></div>
+  `;
+  $('overlay').classList.add('on');
+  document.body.style.overflow='hidden';
+  $('shEdit').onclick=()=>{ closeSheet(); loadForm(s); };
+  $('shPick').onclick=()=>{ togglePick(s.id); closeSheet(); };
+  $('shDel').onclick=async ()=>{
+    if(!confirm(`Supprimer ${s.marque} ${s.modele} ?`)) return;
+    for(const p of (s.photos||[])) await delPhoto(p);
+    shoes = shoes.filter(x=>x.id!==s.id);
+    picked.delete(s.id);
+    saveAll(); renderCatalogue(); updateCmpBar(); closeSheet(); toast('Fiche supprimée');
+  };
+}
+function closeSheet(){ $('overlay').classList.remove('on'); document.body.style.overflow=''; }
+$('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeSheet(); });
+
+function argumentaire(s){
+  const p=[];
+  const amortiTxt={minimal:'un amorti minimaliste qui privilégie les sensations et le retour au sol',modere:'un amorti modéré, le bon compromis confort/dynamisme',maximal:'un amorti maximal qui protège les articulations sur la durée'}[s.amorti];
+  if(amortiTxt) p.push(`Cette paire offre ${amortiTxt}`);
+  if(s.poids) p.push(`pour ${s.poids} g au pied`);
+  let first = p.join(' ')+'.';
+  const out=[first];
+  if(s.stabilite==='soutien') out.push("Le maintien intégré corrige la pronation et sécurise l'appui en fin de sortie.");
+  if(s.chaussant==='large') out.push('Le chaussant large convient aux pieds volumineux ou aux gonflements sur les longues distances.');
+  if(s.chaussant==='fin') out.push('Le chaussant ajusté offre un très bon maintien du pied, idéal sur terrain technique.');
+  if(s.dyn==='reactif') out.push('Le retour d\'énergie est nerveux : à conseiller pour les séances rapides et les compétitions.');
+  if(s.gtx) out.push('La membrane imperméable garde le pied au sec dans la boue et sous la pluie.');
+  if(s.plaque) out.push('La plaque rigide améliore la propulsion et la protection sous le pied.');
+  if(s.crampons) out.push(`Les crampons de ${s.crampons} mm assurent l'accroche sur terrain gras et en descente.`);
+  if(s.montante) out.push('La tige montante protège la cheville sur terrain accidenté et avec un sac chargé.');
+  if((s.usage||[]).length) out.push('À positionner sur : '+s.usage.join(', ').toLowerCase()+'.');
+  return esc(out.join(' ')).replace(/\n/g,' ');
+}
+
+/* ---------- 11. FORMULAIRE ---------- */
+function blankForm(){
+  return {id:null,categorie:'route',marque:'',modele:'',prix:'',promo:'',genre:'mixte',
+    poids:'',drop:'',amorti:'modere',dyn:'equilibre',stabilite:'neutre',chaussant:'standard',
+    niveau:'intermediaire',crampons:'',gtx:false,plaque:false,montante:false,coup:false,
+    usage:[],tailles:{},notes:'',photos:[]};
+}
+function segInit(container,onPick){
+  document.querySelectorAll('#'+container+' .seg').forEach(el=>{
+    el.addEventListener('click',()=>{
+      document.querySelectorAll('#'+container+' .seg').forEach(x=>x.classList.remove('on'));
+      el.classList.add('on'); onPick&&onPick(el.dataset.v);
+    });
+  });
+}
+function segSet(container,val){
+  document.querySelectorAll('#'+container+' .seg').forEach(el=>el.classList.toggle('on',el.dataset.v===val));
+}
+['segGenre','segAmorti','segDyn','segStab','segChaussant','segNiveau'].forEach(c=>{
+  const map={segGenre:'genre',segAmorti:'amorti',segDyn:'dyn',segStab:'stabilite',segChaussant:'chaussant',segNiveau:'niveau'};
+  segInit(c,v=>{ F[map[c]]=v; });
+});
+document.querySelectorAll('#formCat button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#formCat button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); F.categorie=b.dataset.cat; F.usage=[]; renderUsage();
+  $('fieldCrampons').style.display = (F.categorie==='route')?'none':'block';
+}));
+[['sw-gtx','gtx'],['sw-plaque','plaque'],['sw-montante','montante'],['sw-coup','coup']].forEach(([id,k])=>{
+  $(id).addEventListener('click',()=>{ F[k]=!F[k]; $(id).classList.toggle('on',F[k]); });
+});
+function renderUsage(){
+  const el=$('usageSegs');
+  el.innerHTML = USAGE[F.categorie].map(u=>`<div class="seg ${F.usage.includes(u)?'on':''}" data-u="${esc(u)}">${u}</div>`).join('');
+  el.querySelectorAll('.seg').forEach(s=>s.addEventListener('click',()=>{
+    const u=s.dataset.u;
+    if(F.usage.includes(u)) F.usage=F.usage.filter(x=>x!==u); else F.usage.push(u);
+    s.classList.toggle('on');
+  }));
+}
+function renderSizes(){
+  const el=$('sizeGrid');
+  el.innerHTML = SIZES.map(sz=>{
+    const q=F.tailles[sz]||0;
+    return `<div class="size-cell ${q>0?'has':''}" data-sz="${sz}"><div class="n">${sz}</div><div class="q">${q>0?q+' dispo':'—'}</div></div>`;
+  }).join('');
+  el.querySelectorAll('.size-cell').forEach(c=>{
+    const sz=c.dataset.sz;
+    c.addEventListener('click',()=>{ F.tailles[sz]=(F.tailles[sz]||0)+1; renderSizes(); });
+    let t;
+    c.addEventListener('touchstart',()=>{ t=setTimeout(()=>{ delete F.tailles[sz]; renderSizes(); navigator.vibrate&&navigator.vibrate(12); },450); },{passive:true});
+    ['touchend','touchmove','touchcancel'].forEach(ev=>c.addEventListener(ev,()=>clearTimeout(t),{passive:true}));
+    c.addEventListener('contextmenu',e=>{ e.preventDefault(); delete F.tailles[sz]; renderSizes(); });
+  });
+}
+async function renderPhotos(){
+  const el=$('photoGrid');
+  const items = await Promise.all((F.photos||[]).map(async(p,i)=>{
+    const d = photoCache.get(p) || await getPhoto(p);
+    return `<div class="photo-item" data-p="${p}">
+      <img src="${d||''}" alt="">
+      <button class="rm" data-rm="${p}">×</button>
+      ${i===0?'<div class="main-flag">Principale</div>':''}
+    </div>`;
+  }));
+  el.innerHTML = items.join('') + `<button class="photo-add" id="photoAdd">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+    <small>Photo</small></button>`;
+  $('photoAdd').addEventListener('click',()=>$('photoInput').click());
+  el.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const pid=b.dataset.rm;
+    F.photos=F.photos.filter(x=>x!==pid);
+    if(!editingId) await delPhoto(pid);
+    renderPhotos();
+  }));
+  el.querySelectorAll('.photo-item').forEach(it=>it.addEventListener('click',()=>{
+    const pid=it.dataset.p;
+    F.photos=[pid,...F.photos.filter(x=>x!==pid)];
+    renderPhotos(); toast('Photo principale mise à jour');
+  }));
+}
+$('photoInput').addEventListener('change',async e=>{
+  const files=[...e.target.files]; if(!files.length) return;
+  toast('Traitement des photos…');
+  for(const f of files.slice(0,6)){
+    try{ const d=await compress(f); const pid=await savePhoto(d); F.photos.push(pid); }
+    catch(err){ console.error(err); toast('Photo illisible'); }
+  }
+  e.target.value='';
+  renderPhotos(); toast('Photo ajoutée');
+});
+
+function resetForm(){
+  editingId=null; F=blankForm();
+  $('formTitle').textContent='Nouvelle paire';
+  document.querySelectorAll('#formCat button').forEach(b=>b.classList.toggle('on',b.dataset.cat==='route'));
+  ['f-marque','f-modele','f-prix','f-promo','f-poids','f-drop','f-crampons','f-notes'].forEach(i=>$(i).value='');
+  segSet('segGenre','mixte'); segSet('segAmorti','modere'); segSet('segDyn','equilibre');
+  segSet('segStab','neutre'); segSet('segChaussant','standard'); segSet('segNiveau','intermediaire');
+  ['sw-gtx','sw-plaque','sw-montante','sw-coup'].forEach(i=>$(i).classList.remove('on'));
+  $('fieldCrampons').style.display='none';
+  $('saveBtn').textContent='Enregistrer la fiche';
+  renderUsage(); renderSizes(); renderPhotos();
+}
+function loadForm(s){
+  editingId=s.id; F=JSON.parse(JSON.stringify(s)); F.tailles=F.tailles||{}; F.photos=F.photos||[]; F.usage=F.usage||[];
+  $('formTitle').textContent='Modifier la fiche';
+  document.querySelectorAll('#formCat button').forEach(b=>b.classList.toggle('on',b.dataset.cat===F.categorie));
+  $('f-marque').value=F.marque||''; $('f-modele').value=F.modele||'';
+  $('f-prix').value=F.prix??''; $('f-promo').value=F.promo??'';
+  $('f-poids').value=F.poids??''; $('f-drop').value=F.drop??''; $('f-crampons').value=F.crampons??'';
+  $('f-notes').value=F.notes||'';
+  segSet('segGenre',F.genre||'mixte'); segSet('segAmorti',F.amorti); segSet('segDyn',F.dyn||'equilibre');
+  segSet('segStab',F.stabilite); segSet('segChaussant',F.chaussant||'standard'); segSet('segNiveau',F.niveau);
+  [['sw-gtx','gtx'],['sw-plaque','plaque'],['sw-montante','montante'],['sw-coup','coup']].forEach(([i,k])=>$(i).classList.toggle('on',!!F[k]));
+  $('fieldCrampons').style.display=(F.categorie==='route')?'none':'block';
+  $('saveBtn').textContent='Mettre à jour la fiche';
+  renderUsage(); renderSizes(); renderPhotos();
+  go('form');
+}
+$('cancelBtn').addEventListener('click',()=>{ resetForm(); go('catalogue'); });
+
+$('saveBtn').addEventListener('click',()=>{
+  const marque=$('f-marque').value.trim(), modele=$('f-modele').value.trim();
+  if(!marque||!modele){ toast('Marque et modèle obligatoires'); window.scrollTo(0,0); return; }
+  const num=id=>{ const v=$(id).value; return v===''?null:Number(v); };
+  const data={
+    ...F, marque, modele,
+    prix:num('f-prix'), promo:num('f-promo'), poids:num('f-poids'), drop:num('f-drop'), crampons:num('f-crampons'),
+    notes:$('f-notes').value.trim(),
+    id: editingId||uid('s'),
+    createdAt: editingId ? (shoes.find(x=>x.id===editingId)?.createdAt||Date.now()) : Date.now(),
+    updatedAt: Date.now()
+  };
+  if(editingId){ const i=shoes.findIndex(x=>x.id===editingId); if(i>-1) shoes[i]=data; toast('Fiche mise à jour'); }
+  else{ shoes.push(data); toast('Paire ajoutée au catalogue'); }
+  saveAll(); resetForm(); renderCatalogue(); renderStats(); go('catalogue');
+});
+
+/* ---------- 12. CONSEIL CLIENT ---------- */
+const C = {cat:'route',niveau:'',stab:'',amorti:'',chaussant:'',usage:[],gtx:false,stockonly:true};
+document.querySelectorAll('#conseilCat button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#conseilCat button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); C.cat=b.dataset.cat; C.usage=[]; renderCUsage(); $('conseilOut').innerHTML='';
+}));
+segInit('cNiveau',v=>C.niveau=v); segInit('cStab',v=>C.stab=v);
+segInit('cAmorti',v=>C.amorti=v); segInit('cChaussant',v=>C.chaussant=v);
+$('c-gtx').addEventListener('click',()=>{ C.gtx=!C.gtx; $('c-gtx').classList.toggle('on',C.gtx); });
+$('c-stockonly').addEventListener('click',()=>{ C.stockonly=!C.stockonly; $('c-stockonly').classList.toggle('on',C.stockonly); });
+function renderCUsage(){
+  const el=$('cUsage');
+  el.innerHTML=USAGE[C.cat].map(u=>`<div class="seg" data-u="${esc(u)}">${u}</div>`).join('');
+  el.querySelectorAll('.seg').forEach(s=>s.addEventListener('click',()=>{
+    const u=s.dataset.u;
+    if(C.usage.includes(u)) C.usage=C.usage.filter(x=>x!==u); else C.usage.push(u);
+    s.classList.toggle('on');
+  }));
+}
+
+$('conseilBtn').addEventListener('click',()=>{
+  const pointure=$('c-pointure').value?Number($('c-pointure').value):null;
+  const poidsClient=$('c-poids').value?Number($('c-poids').value):null;
+  const budget=$('c-budget').value?Number($('c-budget').value):null;
+
+  let pool = shoes.filter(s=>s.categorie===C.cat);
+  const scored=[];
+  pool.forEach(s=>{
+    let sc=0, max=0, why=[], warn=[];
+    const price=effPrice(s);
+
+    if(budget!=null&&price!=null&&price>budget) return;                     // exclusion budget
+    if(C.stockonly&&totalStock(s)===0) return;                              // exclusion stock
+    if(pointure!=null){
+      const q=(s.tailles||{})[pointure]||(s.tailles||{})[String(pointure)]||0;
+      if(C.stockonly&&q===0) return;                                        // exclusion pointure
+      if(q>0){ sc+=4; why.push('Pointure '+pointure+' dispo'); } max+=4;
+    }
+    if(C.gtx){ if(s.gtx){ sc+=4; why.push('Imperméable'); } else warn.push('Non imperméable'); max+=4; }
+    if(C.stab){ max+=4; if(s.stabilite===C.stab){ sc+=4; why.push(C.stab==='soutien'?'Soutien pronation':'Neutre'); } else warn.push('Maintien '+STAB_L[s.stabilite].toLowerCase()); }
+    if(C.amorti){ max+=4; if(s.amorti===C.amorti){ sc+=4; why.push('Amorti '+AMORTI_L[s.amorti].toLowerCase()); } else if(Math.abs(['minimal','modere','maximal'].indexOf(s.amorti)-['minimal','modere','maximal'].indexOf(C.amorti))===1){ sc+=2; } }
+    if(C.chaussant){ max+=3; if(s.chaussant===C.chaussant){ sc+=3; why.push('Chaussant '+CHAUS_L[s.chaussant].toLowerCase()); } else if(C.chaussant==='large'&&s.chaussant==='fin') warn.push('Chaussant étroit'); }
+    if(C.niveau){ max+=3; if(s.niveau===C.niveau){ sc+=3; why.push('Niveau adapté'); } else if(C.niveau==='debutant'&&s.niveau==='confirme') warn.push('Modèle exigeant'); }
+    if(C.usage.length){
+      const m=(s.usage||[]).filter(u=>C.usage.includes(u));
+      max+=C.usage.length*4;
+      sc+=m.length*4;
+      if(m.length) why.push(m.length>1?m.length+' usages couverts':m[0]);
+    }
+    if(poidsClient!=null){
+      max+=3;
+      if(poidsClient>=85){ if(s.amorti==='maximal'){ sc+=3; why.push('Amorti adapté au gabarit'); } else if(s.amorti==='minimal') warn.push('Amorti léger pour ce gabarit'); }
+      else if(poidsClient<=60){ if(s.amorti!=='maximal'){ sc+=2; } }
+      else sc+=2;
+    }
+    const n=totalStock(s);
+    if(n>0) sc+=2; max+=2;
+    if(s.coup) sc+=1;
+
+    const pct = max>0 ? Math.round(Math.min(100,(sc/max)*100)) : 50;
+    scored.push({s,sc,pct,why,warn});
+  });
+
+  scored.sort((a,b)=>b.sc-a.sc||b.pct-a.pct);
+  const top=scored.slice(0,5);
+  const out=$('conseilOut');
+
+  if(!top.length){
+    out.innerHTML=`<div class="empty"><p>Aucune paire ne correspond à ces critères.<br>Essaie d'élargir le budget, la pointure, ou de décocher « uniquement en stock ».</p></div>`;
+    return;
+  }
+  out.innerHTML = `<div class="sec-label">Proposition — ${CAT_LABEL[C.cat]} · ${top.length} paire${top.length>1?'s':''}</div>` +
+    top.map((r,i)=>{
+      const s=r.s, ph=(s.photos&&s.photos.length)?photoCache.get(s.photos[0]):null;
+      return `<div class="card" data-id="${s.id}" style="position:relative;">
+        <div class="rank">${i+1}</div>
+        <div class="stripe ${s.categorie}"></div>
+        <div class="thumb">${ph?`<img src="${ph}">`:'<div class="ph"></div>'}</div>
+        <div class="body">
+          <div class="card-top">
+            <div style="min-width:0"><div class="c-brand">${esc(s.marque)}</div><div class="c-model">${esc(s.modele)}</div></div>
+            <div class="c-price">${fmtPrice(s)}</div>
+          </div>
+          <div class="c-specs">
+            ${s.poids?`<span><b>${s.poids}</b>g</span>`:''}
+            <span>${AMORTI_L[s.amorti]||''}</span>
+            <span>${stockLabel(s)}</span>
+          </div>
+          <div class="why">
+            ${r.why.slice(0,4).map(w=>`<span>${esc(w)}</span>`).join('')}
+            ${r.warn.slice(0,2).map(w=>`<span class="warn">${esc(w)}</span>`).join('')}
+          </div>
+          <div class="matchbar"><i style="width:${r.pct}%"></i></div>
+        </div>
+      </div>`;
+    }).join('') +
+    `<div class="info-box" style="margin-top:14px;"><p><b style="color:var(--paper)">Vente complémentaire :</b> ${complementaire(C.cat)}</p></div>`;
+
+  out.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>openSheet(c.dataset.id)));
+  out.scrollIntoView({behavior:'smooth',block:'start'});
+});
+function complementaire(cat){
+  if(cat==='route') return "paire de chaussettes techniques anti-ampoules, semelles de confort si affaissement plantaire, et spray imperméabilisant pour l'hiver.";
+  if(cat==='trail') return "chaussettes trail à tige haute, guêtres anti-cailloux, et semelles renforcées pour les formats longs.";
+  return "chaussettes de randonnée rembourrées, imperméabilisant adapté au cuir ou au textile, et semelles de maintien pour le portage.";
+}
+
+/* ---------- 13. COMPARATEUR ---------- */
+function renderCompare(){
+  const el=$('compareOut');
+  const list=[...picked].map(id=>shoes.find(s=>s.id===id)).filter(Boolean);
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><p>Aucune paire sélectionnée.<br>Dans le catalogue, garde le doigt appuyé sur une paire pour l'ajouter à la comparaison (3 maximum).</p></div>`;
+    return;
+  }
+  const row=(label,fn)=>`<tr><th>${label}</th>${list.map(s=>`<td>${fn(s)}</td>`).join('')}</tr>`;
+  el.innerHTML=`<div class="cmp-wrap"><table class="cmp-table">
+    <tr class="cmp-head"><td></td>${list.map(s=>{
+      const ph=(s.photos&&s.photos.length)?photoCache.get(s.photos[0]):null;
+      return `<td>${ph?`<img src="${ph}" style="width:100%;max-width:96px;aspect-ratio:1;object-fit:cover;border-radius:9px;margin-bottom:7px;">`:''}
+        <div class="br">${esc(s.marque)}</div><div class="nm">${esc(s.modele)}</div></td>`;
+    }).join('')}</tr>
+    ${row('Prix',s=>fmtPrice(s))}
+    ${row('Poids',s=>s.poids?s.poids+' g':'—')}
+    ${row('Drop',s=>(s.drop!=null&&s.drop!=='')?s.drop+' mm':'—')}
+    ${row('Amorti',s=>AMORTI_L[s.amorti]||'—')}
+    ${row('Dynamisme',s=>DYN_L[s.dyn]||'—')}
+    ${row('Maintien',s=>STAB_L[s.stabilite]||'—')}
+    ${row('Chaussant',s=>CHAUS_L[s.chaussant]||'—')}
+    ${row('Niveau',s=>NIV_L[s.niveau]||'—')}
+    ${row('Imperméable',s=>s.gtx?'Oui':'Non')}
+    ${row('Crampons',s=>s.crampons?s.crampons+' mm':'—')}
+    ${row('Stock',s=>totalStock(s)+' pr')}
+  </table></div>
+  <button class="btn btn-s" id="clearCmp" style="margin-top:18px;">Vider la comparaison</button>`;
+  $('clearCmp').addEventListener('click',()=>{ picked.clear(); updateCmpBar(); renderCatalogue(); renderCompare(); });
+}
+
+/* ---------- 14. RÉGLAGES / STATS ---------- */
+function renderStats(){
+  const n=shoes.length;
+  const paires=shoes.reduce((a,s)=>a+totalStock(s),0);
+  const rupture=shoes.filter(s=>totalStock(s)===0).length;
+  const valeur=shoes.reduce((a,s)=>a+((effPrice(s)||0)*totalStock(s)),0);
+  $('statGrid').innerHTML=`
+    <div class="stat"><div class="n">${n}</div><div class="l">Modèles référencés</div></div>
+    <div class="stat"><div class="n">${paires}</div><div class="l">Paires en stock</div></div>
+    <div class="stat"><div class="n">${rupture}</div><div class="l">Modèles en rupture</div></div>
+    <div class="stat"><div class="n">${Math.round(valeur)}€</div><div class="l">Valeur du stock</div></div>`;
+}
+$('exportBtn').addEventListener('click',async ()=>{
+  const photos={};
+  for(const s of shoes) for(const p of (s.photos||[])){ const d=photoCache.get(p)||await getPhoto(p); if(d) photos[p]=d; }
+  const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),shoes,photos},null,0)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='sparna-catalogue-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('Catalogue exporté');
+});
+$('importBtn').addEventListener('click',()=>$('importInput').click());
+$('importInput').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const txt=await f.text();
+    const data=JSON.parse(txt);
+    if(!Array.isArray(data.shoes)) throw new Error('format');
+    if(!confirm(`Importer ${data.shoes.length} fiches ? Le catalogue actuel sera remplacé.`)) return;
+    for(const [pid,d] of Object.entries(data.photos||{})){ await KV.set('ph_'+pid,d); photoCache.set(pid,d); }
+    shoes=data.shoes; saveAll(); renderCatalogue(); renderStats(); toast('Catalogue importé');
+    go('catalogue');
+  }catch(err){ console.error(err); toast('Fichier illisible'); }
+  e.target.value='';
+});
+$('wipeBtn').addEventListener('click',async ()=>{
+  if(!confirm('Effacer définitivement toutes les fiches et photos ?')) return;
+  if(!confirm('Vraiment sûr ? Cette action est irréversible.')) return;
+  for(const s of shoes) for(const p of (s.photos||[])) await delPhoto(p);
+  shoes=[]; picked.clear(); saveAll(); renderCatalogue(); renderStats(); updateCmpBar(); toast('Catalogue effacé');
+});
+
+/* ---------- 15. INIT ---------- */
+$('brands').innerHTML=BRANDS.map(b=>`<option value="${b}">`).join('');
+F=blankForm();
+renderUsage(); renderSizes(); renderPhotos(); renderCUsage();
+$('topbar').style.display='block';
+loadAll();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
