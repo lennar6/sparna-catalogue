@@ -1259,9 +1259,30 @@ $('importInput').addEventListener('change',async e=>{
     const txt=await f.text();
     const data=JSON.parse(txt);
     if(!Array.isArray(data.shoes)) throw new Error('format');
-    if(!confirm(`Importer ${data.shoes.length} fiches ? Le catalogue actuel sera remplacé.`)) return;
+    let mode='merge';
+    if(shoes.length){
+      const replace = confirm(
+        `Fichier : ${data.shoes.length} fiches.\nCatalogue actuel : ${shoes.length} fiches.\n\n`+
+        `OK = REMPLACER tout le catalogue\nAnnuler = AJOUTER au catalogue existant (recommandé)`);
+      mode = replace ? 'replace' : 'merge';
+    }
     for(const [pid,d] of Object.entries(data.photos||{})){ await KV.set('ph_'+pid,d); photoCache.set(pid,d); }
-    shoes=data.shoes; saveAll(); renderCatalogue(); renderStats(); toast('Catalogue importé');
+    if(mode==='replace'){
+      shoes=data.shoes;
+      toast(data.shoes.length+' fiches importées');
+    }else{
+      const key=s=>((s.marque||'')+'|'+(s.modele||'')).toLowerCase().replace(/\s+/g,' ').trim();
+      const existing=new Map(shoes.map(s=>[key(s),s]));
+      let added=0, skipped=0;
+      for(const ns of data.shoes){
+        const k=key(ns);
+        if(existing.has(k)){ skipped++; continue; }   // on ne touche pas aux fiches déjà saisies
+        ns.id=uid('s');
+        shoes.push(ns); existing.set(k,ns); added++;
+      }
+      toast(added+' ajoutées'+(skipped?' · '+skipped+' déjà présentes':''));
+    }
+    saveAll(); renderCatalogue(); renderStats();
     go('catalogue');
   }catch(err){ console.error(err); toast('Fichier illisible'); }
   e.target.value='';
