@@ -232,6 +232,31 @@ nav{
 }
 @keyframes up{from{transform:translateY(26px);}to{transform:none;}}
 .grip{width:38px;height:4px;background:var(--surface-3);border-radius:3px;margin:9px auto 0;}
+.sheet-close{
+  position:sticky;top:0;z-index:5;height:0;
+}
+.sheet-close button{
+  position:absolute;right:14px;top:8px;width:36px;height:36px;border-radius:50%;
+  background:rgba(23,25,29,.85);backdrop-filter:blur(8px);border:1px solid var(--line-2);
+  color:var(--paper);display:grid;place-items:center;cursor:pointer;
+}
+.sheet-close button svg{width:18px;height:18px;}
+.sh-back{
+  padding:14px 20px 0;
+}
+.sh-back button{
+  width:100%;padding:13px;border-radius:12px;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--paper);font-weight:600;font-size:.9rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.sh-back button svg{width:17px;height:17px;}
+.dist-line{display:flex;gap:6px;flex-wrap:wrap;}
+.dist-pill{
+  font-size:.76rem;padding:6px 11px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--dim);
+}
+.dist-pill.on{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.5);color:#9dc2fb;}
+.deduced{font-size:.68rem;color:var(--dim);opacity:.7;margin-top:8px;font-style:italic;}
 .hero{width:100%;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden;position:relative;}
 .hero-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:100%;scrollbar-width:none;}
 .hero-scroll::-webkit-scrollbar{display:none;}
@@ -447,6 +472,12 @@ nav{
     <div class="segs" id="usageSegs"></div>
   </div>
 
+  <div class="fs" id="fieldDistances">
+    <div class="sec-label">Distances conseillées</div>
+    <div class="segs" id="distSegs"></div>
+    <div class="hint">Laisse tout décoché : l'appli déduira les distances des caractéristiques.</div>
+  </div>
+
   <div class="fs">
     <div class="sec-label">Stock par pointure</div>
     <div class="hint" style="margin-bottom:9px;margin-top:0;">Touche une pointure pour ajouter une paire, appui long pour remettre à zéro.</div>
@@ -513,6 +544,17 @@ nav{
       </div>
     </div>
     <div class="field"><label>Budget max (€)</label><input type="number" id="c-budget" inputmode="numeric" placeholder="laisser vide si aucun"></div>
+  </div>
+
+  <div class="fs" id="conseilDistBlock">
+    <div class="sec-label">Objectif / distance visée</div>
+    <div class="segs" id="cDist">
+      <div class="seg on" data-v="">Peu importe</div>
+      <div class="seg" data-v="5 / 10 km">5 / 10 km</div>
+      <div class="seg" data-v="Semi-marathon">Semi</div>
+      <div class="seg" data-v="Marathon">Marathon</div>
+      <div class="seg" data-v="Ultra">Ultra</div>
+    </div>
   </div>
 
   <div class="fs">
@@ -642,7 +684,24 @@ const USAGE = {
   rando:['Balade à la journée','Trek plusieurs jours','Terrain facile','Terrain accidenté','Montagne','Portage lourd','Marche urbaine']
 };
 const CAT_LABEL = {route:'Route',trail:'Trail',rando:'Rando'};
-const AMORTI_L = {minimal:'Minimal',modere:'Modéré',maximal:'Maximal'};
+const DISTANCES = ['5 / 10 km','Semi-marathon','Marathon','Ultra'];
+
+/* Distances conseillées : champ explicite si renseigné, sinon déduction des caractéristiques */
+function distancesOf(s){
+  if(Array.isArray(s.distances) && s.distances.length) return {list:s.distances, deduced:false};
+  const p = s.poids || 275;
+  const d = [];
+  const rapide = s.dyn==='reactif' || s.plaque || s.amorti==='minimal' || p<=245;
+  const maxi   = s.amorti==='maximal';
+  const longUsage = (s.usage||[]).some(u=>/longue|long|ultra/i.test(u));
+
+  if(rapide) d.push('5 / 10 km');
+  if(!(s.amorti==='minimal' && p>285)) d.push('Semi-marathon');
+  if(maxi || s.plaque || (s.amorti==='modere' && p<=295)) d.push('Marathon');
+  if(maxi && longUsage) d.push('Ultra');
+  if(!d.length) d.push('Semi-marathon');
+  return {list:d, deduced:true};
+}const AMORTI_L = {minimal:'Minimal',modere:'Modéré',maximal:'Maximal'};
 const DYN_L = {souple:'Souple',equilibre:'Équilibré',reactif:'Réactif'};
 const STAB_L = {neutre:'Neutre',soutien:'Soutien'};
 const CHAUS_L = {fin:'Étroit',standard:'Standard',large:'Large'};
@@ -655,7 +714,7 @@ const BRANDS = ['Hoka','Salomon','Brooks','Asics','New Balance','Saucony','Nike'
 let shoes = [];
 const photoCache = new Map();   // photoId -> dataURL
 let view='catalogue', catFilter='all', query='', stockOnly=false, sortMode='marque';
-let editingId=null, picked=new Set();
+let editingId=null, picked=new Set(), sheetOpen=false;
 let F = null;  // état du formulaire courant
 
 /* ---------- 4. UTILITAIRES ---------- */
@@ -858,6 +917,9 @@ function openSheet(id){
 
   $('sheet').innerHTML = `
     <div class="grip"></div>
+    <div class="sheet-close"><button id="shClose" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button></div>
     <div class="hero">
       ${photos.length?`<div class="hero-scroll">${photos.map(p=>`<img src="${p}" alt="">`).join('')}</div>
         ${photos.length>1?`<div class="hero-count mono">${photos.length} photos</div>`:''}`
@@ -906,6 +968,15 @@ function openSheet(id){
       </div>
     </div>
 
+    ${s.categorie!=='rando' ? (()=>{ const D=distancesOf(s); return `
+    <div class="spec-block">
+      <div class="sec-label">Distances conseillées</div>
+      <div class="dist-line">
+        ${DISTANCES.map(d=>`<span class="dist-pill ${D.list.includes(d)?'on':''}">${d}</span>`).join('')}
+      </div>
+      ${D.deduced?'<div class="deduced">Déduit des caractéristiques — modifie la fiche pour le fixer toi-même.</div>':''}
+    </div>`; })() : ''}
+
     <div class="argu">
       <div class="sec-label">Argumentaire</div>
       <p>${argumentaire(s)}</p>
@@ -918,9 +989,16 @@ function openSheet(id){
       <button class="btn btn-s" id="shPick" style="flex:0 0 34%;">${picked.has(s.id)?'Retirer':'Comparer'}</button>
     </div>
     <div style="padding:9px 20px 0;"><button class="btn btn-d" id="shDel">Supprimer cette fiche</button></div>
+    <div class="sh-back"><button id="shBack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Retour au catalogue
+    </button></div>
   `;
   $('overlay').classList.add('on');
   document.body.style.overflow='hidden';
+  if(!sheetOpen){ sheetOpen=true; try{ history.pushState({sheet:true},''); }catch(e){} }
+  $('shClose').onclick = ()=>closeSheet();
+  $('shBack').onclick = ()=>closeSheet();
   $('shEdit').onclick=()=>{ closeSheet(); loadForm(s); };
   $('shPick').onclick=()=>{ togglePick(s.id); closeSheet(); };
   $('shDel').onclick=async ()=>{
@@ -931,8 +1009,14 @@ function openSheet(id){
     saveAll(); renderCatalogue(); updateCmpBar(); closeSheet(); toast('Fiche supprimée');
   };
 }
-function closeSheet(){ $('overlay').classList.remove('on'); document.body.style.overflow=''; }
+function closeSheet(fromPop){
+  $('overlay').classList.remove('on');
+  document.body.style.overflow='';
+  if(sheetOpen && !fromPop){ sheetOpen=false; try{ history.back(); }catch(e){} }
+  else sheetOpen=false;
+}
 $('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeSheet(); });
+window.addEventListener('popstate',()=>{ if(sheetOpen) closeSheet(true); });
 
 function argumentaire(s){
   const p=[];
@@ -958,7 +1042,7 @@ function blankForm(){
   return {id:null,categorie:'route',marque:'',modele:'',prix:'',promo:'',genre:'mixte',
     poids:'',drop:'',amorti:'modere',dyn:'equilibre',stabilite:'neutre',chaussant:'standard',
     niveau:'intermediaire',crampons:'',gtx:false,plaque:false,montante:false,coup:false,
-    usage:[],tailles:{},notes:'',photos:[]};
+    usage:[],distances:[],tailles:{},notes:'',photos:[]};
 }
 function segInit(container,onPick){
   document.querySelectorAll('#'+container+' .seg').forEach(el=>{
@@ -977,7 +1061,7 @@ function segSet(container,val){
 });
 document.querySelectorAll('#formCat button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#formCat button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); F.categorie=b.dataset.cat; F.usage=[]; renderUsage();
+  b.classList.add('on'); F.categorie=b.dataset.cat; F.usage=[]; renderUsage(); renderDistances();
   $('fieldCrampons').style.display = (F.categorie==='route')?'none':'block';
 }));
 [['sw-gtx','gtx'],['sw-plaque','plaque'],['sw-montante','montante'],['sw-coup','coup']].forEach(([id,k])=>{
@@ -992,6 +1076,18 @@ function renderUsage(){
     s.classList.toggle('on');
   }));
 }
+function renderDistances(){
+  const el=$('distSegs');
+  F.distances = F.distances || [];
+  el.innerHTML = DISTANCES.map(d=>`<div class="seg ${F.distances.includes(d)?'on':''}" data-d="${esc(d)}">${d}</div>`).join('');
+  el.querySelectorAll('.seg').forEach(x=>x.addEventListener('click',()=>{
+    const d=x.dataset.d;
+    if(F.distances.includes(d)) F.distances=F.distances.filter(y=>y!==d); else F.distances.push(d);
+    x.classList.toggle('on');
+  }));
+  $('fieldDistances').style.display = (F.categorie==='rando') ? 'none' : 'block';
+}
+
 function renderSizes(){
   const el=$('sizeGrid');
   el.innerHTML = SIZES.map(sz=>{
@@ -1055,10 +1151,10 @@ function resetForm(){
   ['sw-gtx','sw-plaque','sw-montante','sw-coup'].forEach(i=>$(i).classList.remove('on'));
   $('fieldCrampons').style.display='none';
   $('saveBtn').textContent='Enregistrer la fiche';
-  renderUsage(); renderSizes(); renderPhotos();
+  renderUsage(); renderDistances(); renderSizes(); renderPhotos();
 }
 function loadForm(s){
-  editingId=s.id; F=JSON.parse(JSON.stringify(s)); F.tailles=F.tailles||{}; F.photos=F.photos||[]; F.usage=F.usage||[];
+  editingId=s.id; F=JSON.parse(JSON.stringify(s)); F.tailles=F.tailles||{}; F.photos=F.photos||[]; F.usage=F.usage||[]; F.distances=F.distances||[];
   $('formTitle').textContent='Modifier la fiche';
   document.querySelectorAll('#formCat button').forEach(b=>b.classList.toggle('on',b.dataset.cat===F.categorie));
   $('f-marque').value=F.marque||''; $('f-modele').value=F.modele||'';
@@ -1070,7 +1166,7 @@ function loadForm(s){
   [['sw-gtx','gtx'],['sw-plaque','plaque'],['sw-montante','montante'],['sw-coup','coup']].forEach(([i,k])=>$(i).classList.toggle('on',!!F[k]));
   $('fieldCrampons').style.display=(F.categorie==='route')?'none':'block';
   $('saveBtn').textContent='Mettre à jour la fiche';
-  renderUsage(); renderSizes(); renderPhotos();
+  renderUsage(); renderDistances(); renderSizes(); renderPhotos();
   go('form');
 }
 $('cancelBtn').addEventListener('click',()=>{ resetForm(); go('catalogue'); });
@@ -1080,7 +1176,7 @@ $('saveBtn').addEventListener('click',()=>{
   if(!marque||!modele){ toast('Marque et modèle obligatoires'); window.scrollTo(0,0); return; }
   const num=id=>{ const v=$(id).value; return v===''?null:Number(v); };
   const data={
-    ...F, marque, modele,
+    ...F, marque, modele, distances: F.distances||[],
     prix:num('f-prix'), promo:num('f-promo'), poids:num('f-poids'), drop:num('f-drop'), crampons:num('f-crampons'),
     notes:$('f-notes').value.trim(),
     id: editingId||uid('s'),
@@ -1093,13 +1189,15 @@ $('saveBtn').addEventListener('click',()=>{
 });
 
 /* ---------- 12. CONSEIL CLIENT ---------- */
-const C = {cat:'route',niveau:'',stab:'',amorti:'',chaussant:'',usage:[],gtx:false,stockonly:true};
+const C = {cat:'route',niveau:'',stab:'',amorti:'',chaussant:'',dist:'',usage:[],gtx:false,stockonly:true};
 document.querySelectorAll('#conseilCat button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#conseilCat button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); C.cat=b.dataset.cat; C.usage=[]; renderCUsage(); $('conseilOut').innerHTML='';
+  $('conseilDistBlock').style.display = (C.cat==='rando')?'none':'block';
 }));
 segInit('cNiveau',v=>C.niveau=v); segInit('cStab',v=>C.stab=v);
 segInit('cAmorti',v=>C.amorti=v); segInit('cChaussant',v=>C.chaussant=v);
+segInit('cDist',v=>C.dist=v);
 $('c-gtx').addEventListener('click',()=>{ C.gtx=!C.gtx; $('c-gtx').classList.toggle('on',C.gtx); });
 $('c-stockonly').addEventListener('click',()=>{ C.stockonly=!C.stockonly; $('c-stockonly').classList.toggle('on',C.stockonly); });
 function renderCUsage(){
@@ -1135,6 +1233,12 @@ $('conseilBtn').addEventListener('click',()=>{
     if(C.amorti){ max+=4; if(s.amorti===C.amorti){ sc+=4; why.push('Amorti '+AMORTI_L[s.amorti].toLowerCase()); } else if(Math.abs(['minimal','modere','maximal'].indexOf(s.amorti)-['minimal','modere','maximal'].indexOf(C.amorti))===1){ sc+=2; } }
     if(C.chaussant){ max+=3; if(s.chaussant===C.chaussant){ sc+=3; why.push('Chaussant '+CHAUS_L[s.chaussant].toLowerCase()); } else if(C.chaussant==='large'&&s.chaussant==='fin') warn.push('Chaussant étroit'); }
     if(C.niveau){ max+=3; if(s.niveau===C.niveau){ sc+=3; why.push('Niveau adapté'); } else if(C.niveau==='debutant'&&s.niveau==='confirme') warn.push('Modèle exigeant'); }
+    if(C.dist && s.categorie!=='rando'){
+      max+=6;
+      const D=distancesOf(s);
+      if(D.list.includes(C.dist)){ sc+=6; why.push(C.dist); }
+      else { warn.push('Pas idéale sur '+C.dist.toLowerCase()); }
+    }
     if(C.usage.length){
       const m=(s.usage||[]).filter(u=>C.usage.includes(u));
       max+=C.usage.length*4;
@@ -1297,7 +1401,7 @@ $('wipeBtn').addEventListener('click',async ()=>{
 /* ---------- 15. INIT ---------- */
 $('brands').innerHTML=BRANDS.map(b=>`<option value="${b}">`).join('');
 F=blankForm();
-renderUsage(); renderSizes(); renderPhotos(); renderCUsage();
+renderUsage(); renderDistances(); renderSizes(); renderPhotos(); renderCUsage();
 $('topbar').style.display='block';
 loadAll();
 
